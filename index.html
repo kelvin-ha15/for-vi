@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For Vi tiny béo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,500&family=Caveat:wght@500;600;700&family=Jost:wght@300;400;500&family=Homemade+Apple&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#f6d9d6;
+    --blush-deep:#e8b9c2;
+    --rose:#c2607a;
+    --rose-deep:#9c3f5c;
+    --cream:#fdf7f0;
+    --ink:#3a2c33;
+    --gold:#cf9d4f;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    font-family:'Jost',sans-serif;
+    color:var(--ink);
+    background:linear-gradient(160deg,#fbe6e4 0%, #f8d9db 35%, #f3c9d1 70%, #ecb9c6 100%);
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  /* floating soft blobs */
+  .blob{position:fixed;border-radius:50%;filter:blur(40px);opacity:.35;pointer-events:none;z-index:0;}
+  .blob1{width:280px;height:280px;background:#f7b6c6;top:-60px;left:-80px;}
+  .blob2{width:320px;height:320px;background:#e7a8c0;bottom:-100px;right:-100px;}
+
+  .stage{
+    position:relative;
+    z-index:1;
+    min-height:100vh;
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:60px 24px;
+    text-align:center;
+    opacity:0;
+    transform:translateY(14px);
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  .stage.active{display:flex;}
+  .stage.visible{opacity:1;transform:translateY(0);}
+
+  /* ---------- MUSIC WIDGET ---------- */
+  .music-widget{
+    position:fixed;
+    bottom:20px;
+    left:20px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:rgba(255,255,255,.7);
+    backdrop-filter:blur(8px);
+    border-radius:40px;
+    padding:8px 16px 8px 8px;
+    box-shadow:0 6px 20px rgba(156,63,92,.15);
+    z-index:50;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .5s ease;
+  }
+  .music-widget.show{opacity:1;pointer-events:auto;}
+  .music-disc{
+    width:34px;height:34px;border-radius:50%;
+    background:radial-gradient(circle at center, #3a2c33 0%, #3a2c33 30%, var(--rose-deep) 32%, var(--rose-deep) 100%);
+    display:flex;align-items:center;justify-content:center;
+    animation:spin 6s linear infinite;
+    animation-play-state:paused;
+  }
+  .music-disc.playing{animation-play-state:running;}
+  .music-disc::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--cream);}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  .music-label{font-size:.72rem;letter-spacing:.02em;color:var(--rose-deep);line-height:1.1;text-align:left;}
+  .music-label b{display:block;font-size:.78rem;color:var(--ink);}
+  .music-toggle{
+    border:none;background:var(--rose);color:#fff;width:26px;height:26px;border-radius:50%;
+    font-size:.7rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+
+  /* ---------- SCREEN 1: LOCK ---------- */
+  .eyebrow{
+    font-size:.78rem;
+    letter-spacing:.18em;
+    color:var(--rose-deep);
+    margin-bottom:6px;
+  }
+  h1.title{
+    font-family:'Cormorant Garamond',serif;
+    font-weight:600;
+    font-size:2.6rem;
+    margin:0 0 10px;
+    color:var(--ink);
+  }
+  .sub{
+    font-size:.95rem;
+    color:#7a5c66;
+    margin:0 0 4px;
+  }
+  .hint{
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    color:var(--rose);
+    font-size:1.05rem;
+    margin-bottom:34px;
+  }
+  .lock-icon{
+    width:120px;height:120px;
+    margin:0 auto 28px;
+    position:relative;
+  }
+  .lock-icon svg{width:100%;height:100%;filter:drop-shadow(0 10px 18px rgba(156,63,92,.35));}
+  .lock-icon.shake{animation:shake .45s;}
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-10px);}
+    40%{transform:translateX(9px);}
+    60%{transform:translateX(-6px);}
+    80%{transform:translateX(5px);}
+  }
+  .code-boxes{display:flex;gap:14px;justify-content:center;margin-bottom:34px;}
+  .code-box{
+    width:44px;height:54px;
+    border-radius:10px;
+    background:#fff;
+    box-shadow:0 4px 14px rgba(156,63,92,.15);
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.4rem;font-weight:500;color:var(--ink);
+    font-family:'Jost',sans-serif;
+  }
+  .code-box.filled{background:#fff0f2;box-shadow:0 4px 14px rgba(156,63,92,.28);}
+  .code-box.error{background:#ffe3e3;}
+  .keypad{
+    display:grid;
+    grid-template-columns:repeat(3, 74px);
+    gap:14px;
+    justify-content:center;
+  }
+  .key{
+    width:74px;height:74px;
+    border-radius:50%;
+    border:none;
+    background:#fff;
+    font-size:1.3rem;
+    color:var(--ink);
+    box-shadow:0 4px 10px rgba(156,63,92,.12);
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .12s ease, box-shadow .12s ease;
+    font-family:'Jost',sans-serif;
+  }
+  .key:active{transform:scale(.92);box-shadow:0 2px 6px rgba(156,63,92,.18);}
+  .key.sub-key{font-size:.72rem;color:#a5808c;background:transparent;box-shadow:none;}
+
+  /* ---------- SCREEN 2: TITLE ---------- */
+  .heart-mark{font-size:1.8rem;margin-bottom:18px;}
+  .tap-btn{
+    margin-top:38px;
+    border:none;
+    background:var(--rose-deep);
+    color:#fff;
+    padding:14px 34px;
+    border-radius:40px;
+    font-size:.95rem;
+    letter-spacing:.03em;
+    cursor:pointer;
+    box-shadow:0 10px 24px rgba(156,63,92,.3);
+    font-family:'Jost',sans-serif;
+    transition:transform .15s ease;
+  }
+  .tap-btn:hover{transform:translateY(-2px);}
+
+  /* ---------- SCREEN 3: ENVELOPE ---------- */
+  .envelope-wrap{cursor:pointer;user-select:none;}
+  .envelope{
+    width:260px;height:190px;
+    background:linear-gradient(160deg,#fbeee3,#f3d9cf);
+    border-radius:8px;
+    position:relative;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 20px 40px rgba(156,63,92,.25);
+    overflow:visible;
+    transition:transform .3s ease;
+  }
+  .envelope::before{
+    content:'';
+    position:absolute;
+    top:0;left:0;right:0;
+    height:100px;
+    background:linear-gradient(135deg, #f6ddd0 49%, transparent 50%), linear-gradient(45deg, #f6ddd0 49%, transparent 50%);
+    background-size:50% 100%;
+    background-position:left top, right top;
+    background-repeat:no-repeat;
+    border-radius:8px 8px 0 0;
+  }
+  .seal{
+    position:relative;
+    z-index:2;
+    width:56px;height:56px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #d9445c, #9c2036);
+    display:flex;align-items:center;justify-content:center;
+    color:#f9dede;
+    font-size:1.4rem;
+    box-shadow:0 4px 10px rgba(0,0,0,.25) inset, 0 6px 10px rgba(0,0,0,.2);
+  }
+  .envelope-label{
+    position:absolute;
+    bottom:34px;
+    left:0;right:0;
+    text-align:center;
+    font-family:'Caveat',cursive;
+    font-size:1.5rem;
+    color:var(--rose-deep);
+  }
+  .envelope-wrap:hover .envelope{transform:translateY(-4px);}
+  .tap-caption{margin-top:26px;font-size:.85rem;color:#8a6a74;letter-spacing:.02em;}
+
+  /* ---------- SCREEN 4: LETTER ---------- */
+  .stage.letter-stage{
+    justify-content:flex-start;
+    padding-top:120px;
+    padding-bottom:100px;
+  }
+  .polaroid-scatter{
+    position:absolute;
+    top:0;left:0;right:0;
+    height:0;
+  }
+  .letter-card{
+    position:relative;
+    max-width:620px;
+    width:100%;
+    background:#fffdf9;
+    border:1px solid #ecd7cf;
+    border-radius:4px;
+    padding:60px 46px 50px;
+    box-shadow:0 30px 60px rgba(120,60,80,.18);
+    text-align:left;
+  }
+  .letter-eyebrow{
+    text-align:center;
+    font-family:'Cormorant Garamond',serif;
+    font-style:italic;
+    color:var(--rose);
+    margin-bottom:8px;
+    font-size:1rem;
+  }
+  .letter-mark{text-align:center;font-size:1.4rem;margin-bottom:6px;}
+  .letter-body{
+    font-family:'Caveat',cursive;
+    font-weight:500;
+    font-size:1.65rem;
+    line-height:1.5;
+    color:#3a2c33;
+  }
+  .letter-body .dropcap{
+    float:left;
+    font-family:'Cormorant Garamond',serif;
+    font-size:3.2rem;
+    line-height:.8;
+    padding-right:10px;
+    padding-top:6px;
+    color:var(--rose-deep);
+  }
+  .letter-signoff{
+    margin-top:34px;
+    text-align:right;
+    font-family:'Caveat',cursive;
+    font-size:1.9rem;
+    color:var(--rose-deep);
+  }
+  .signoff-underline{
+    width:140px;height:2px;
+    background:var(--blush-deep);
+    margin:2px 0 0 auto;
+    border-radius:2px;
+  }
+
+  /* polaroids scattered on top of the letter card, like the screenshot */
+  .polaroid{
+    position:absolute;
+    width:150px;
+    background:#fff;
+    padding:10px 10px 26px;
+    box-shadow:0 14px 26px rgba(90,50,65,.28);
+    border-radius:2px;
+  }
+  .polaroid img{width:100%;display:block;border-radius:1px;}
+  .p1{top:-80px;left:6%;transform:rotate(-9deg);}
+  .p2{top:-96px;left:38%;transform:rotate(4deg);}
+  .p3{top:-78px;right:5%;transform:rotate(10deg);}
+
+  /* ---------- OUR PICTURES ---------- */
+  .section-heading{
+    font-family:'Cormorant Garamond',serif;
+    font-size:2.1rem;
+    margin:0 0 6px;
+  }
+  .section-sub{color:#8a6a74;font-size:.92rem;margin-bottom:40px;}
+  .gallery{
+    max-width:900px;
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:34px 26px;
+    padding:0 10px;
+  }
+  .gallery .polaroid{
+    position:relative;
+    width:100%;
+    top:auto;left:auto;right:auto;
+    transform:none;
+    margin:0 auto;
+  }
+  .gallery .polaroid:nth-child(odd){transform:rotate(-3deg);}
+  .gallery .polaroid:nth-child(even){transform:rotate(3deg);}
+  .polaroid-caption{
+    font-family:'Caveat',cursive;
+    font-size:1.15rem;
+    color:var(--rose-deep);
+    text-align:center;
+    position:absolute;
+    bottom:5px;left:0;right:0;
+  }
+
+  /* ---------- OUR SONG ---------- */
+  .song-section{margin-top:90px;max-width:640px;width:100%;}
+  .song-frame{
+    display:block;
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 24px 50px rgba(120,60,80,.25);
+    border:6px solid #fff;
+    aspect-ratio:16/9;
+    text-decoration:none;
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .song-frame:hover{transform:translateY(-3px);box-shadow:0 30px 60px rgba(120,60,80,.32);}
+  .song-thumb{
+    width:100%;height:100%;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,255,255,.08), transparent 60%),
+      linear-gradient(135deg,#2a1c22,#151015);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  }
+  .song-play{
+    width:64px;height:64px;border-radius:50%;
+    background:var(--rose);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.4rem;
+    box-shadow:0 10px 24px rgba(0,0,0,.35);
+  }
+  .song-thumb-text{color:#f6e4e8;}
+  .song-thumb-text b{display:block;font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;}
+  .song-thumb-text span{font-size:.8rem;opacity:.7;letter-spacing:.02em;}
+  .song-frame iframe{width:100%;height:100%;border:0;display:block;}
+  .song-note{margin-top:16px;font-family:'Cormorant Garamond',serif;font-style:italic;color:#8a6a74;}
+
+  .final-heart{margin-top:70px;font-size:1.6rem;}
+
+  @media(max-width:640px){
+    .keypad{grid-template-columns:repeat(3, 64px);}
+    .key{width:64px;height:64px;font-size:1.15rem;}
+    h1.title{font-size:2.1rem;}
+    .letter-card{padding:70px 24px 40px;}
+    .p1{left:2%;width:110px;top:-64px;}
+    .p2{left:37%;width:110px;top:-78px;}
+    .p3{right:2%;width:110px;top:-60px;}
+    .gallery{grid-template-columns:repeat(2,1fr);}
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob1"></div>
+<div class="blob blob2"></div>
+
+<audio id="bgm" src="assets/song.mp3" loop preload="auto"></audio>
+<div class="music-widget" id="musicWidget">
+  <div class="music-disc" id="musicDisc"></div>
+  <div class="music-label">Now playing<b>About You — The 1975</b></div>
+  <button class="music-toggle" id="musicToggle" aria-label="Play or pause music">❚❚</button>
+</div>
+
+<!-- SCREEN 1: LOCK -->
+<section class="stage active" id="stage-lock">
+  <div class="eyebrow">FOR VI TINY BÉO</div>
+  <h1 class="title">This one's locked</h1>
+  <p class="sub">Enter the 4-digit code only you two know.</p>
+  <p class="hint">Hint: Anniversary Date</p>
+
+  <div class="lock-icon" id="lockIcon">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M32 42V32a18 18 0 0136 0v10" stroke="#d8b25a" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <rect x="22" y="42" width="56" height="42" rx="10" fill="var(--rose)"/>
+      <circle cx="50" cy="60" r="6" fill="#7c2c46"/>
+      <rect x="47" y="60" width="6" height="14" rx="3" fill="#7c2c46"/>
+    </svg>
+  </div>
+
+  <div class="code-boxes" id="codeBoxes">
+    <div class="code-box"></div>
+    <div class="code-box"></div>
+    <div class="code-box"></div>
+    <div class="code-box"></div>
+  </div>
+
+  <div class="keypad" id="keypad">
+    <button class="key" data-key="1">1</button>
+    <button class="key" data-key="2">2</button>
+    <button class="key" data-key="3">3</button>
+    <button class="key" data-key="4">4</button>
+    <button class="key" data-key="5">5</button>
+    <button class="key" data-key="6">6</button>
+    <button class="key" data-key="7">7</button>
+    <button class="key" data-key="8">8</button>
+    <button class="key" data-key="9">9</button>
+    <button class="key sub-key" data-key="clear">clear</button>
+    <button class="key" data-key="0">0</button>
+    <button class="key sub-key" data-key="back">⌫</button>
+  </div>
+</section>
+
+<!-- SCREEN 2: TITLE -->
+<section class="stage" id="stage-title">
+  <div class="heart-mark">💌</div>
+  <h1 class="title">A letter for Vi tiny béo</h1>
+  <button class="tap-btn" id="toEnvelope">Open it</button>
+</section>
+
+<!-- SCREEN 3: ENVELOPE -->
+<section class="stage" id="stage-envelope">
+  <div class="envelope-wrap" id="envelopeWrap">
+    <div class="envelope">
+      <div class="seal">♥</div>
+      <div class="envelope-label">For Vi tiny béo</div>
+    </div>
+  </div>
+  <p class="tap-caption">Tap to break the seal</p>
+</section>
+
+<!-- SCREEN 4: LETTER + GALLERY + SONG -->
+<section class="stage letter-stage" id="stage-letter">
+
+  <div class="letter-card">
+    <div class="polaroid p1"><img src="assets/photos/IMG_7172.jpeg" alt=""></div>
+    <div class="polaroid p2"><img src="assets/photos/IMG_7447.jpeg" alt=""></div>
+    <div class="polaroid p3"><img src="assets/photos/IMG_7485.jpeg" alt=""></div>
+
+    <div class="letter-mark">💛</div>
+    <div class="letter-eyebrow">for Vi tiny béo</div>
+    <div class="letter-body">
+      <span class="dropcap">H</span>ello Tiny,<br><br>
+      Happy 6 Months, my love. It's a big goal to celebrate, and I am very happy we made it to this halfway point of the year anniversary. Since the first day you became my gf I have treated you like a princess, and that will never ever stop. I really wish I could come meet you, but you know I am in my senior year, I will get really busy, and I know you understand that very well, my love. Unfortunately, we are celebrating it through the screen again, but I hope this really makes up for it and I am really looking forward to you surprising me in the next 2 months or so hehe. I am guessing it is October, but well, I don't know if it is true, let me know, hehe.
+      <br><br>
+      Anyways, I am so grateful to have you in my life and keep smiling as you always are, little TINY. Just know that I am always proud of you, and I will always be here for you, whatever support you need in your life. I am your number 1 supporter and your best friend for life. I love you so so much.
+    </div>
+    <div class="letter-signoff">
+      Kelvin (Baby) Ha
+      <div class="signoff-underline"></div>
+    </div>
+  </div>
+
+  <div class="song-section" style="text-align:center;margin-top:110px;">
+    <h2 class="section-heading">Our Pictures</h2>
+    <p class="section-sub">a few of my favorites of us</p>
+  </div>
+
+  <div class="gallery">
+    <div class="polaroid" style="position:relative;padding-bottom:30px;">
+      <img src="assets/photos/IMG_4006.jpeg" alt="">
+      <div class="polaroid-caption">My current fav pic of us</div>
+    </div>
+    <div class="polaroid" style="position:relative;padding-bottom:30px;">
+      <img src="assets/photos/IMG_8357.jpeg" alt="">
+      <div class="polaroid-caption">little tiny</div>
+    </div>
+    <div class="polaroid" style="position:relative;padding-bottom:30px;">
+      <img src="assets/photos/IMG_7853.jpeg" alt="">
+      <div class="polaroid-caption">A picture I will carry around forever</div>
+    </div>
+    <div class="polaroid" style="position:relative;padding-bottom:30px;">
+      <img src="assets/photos/IMG_7760.jpeg" alt="">
+      <div class="polaroid-caption">panama city beach</div>
+    </div>
+    <div class="polaroid" style="position:relative;padding-bottom:30px;">
+      <img src="assets/photos/IMG_6841.jpeg" alt="">
+      <div class="polaroid-caption">New York with you is always fun</div>
+    </div>
+    <div class="polaroid" style="position:relative;padding-bottom:30px;">
+      <img src="assets/photos/IMG_7172.jpeg" alt="">
+      <div class="polaroid-caption">The place you always wanted to visit</div>
+    </div>
+  </div>
+
+  <div class="song-section">
+    <h2 class="section-heading">Our Song</h2>
+    <p class="section-sub" style="margin-bottom:22px;">press play and remember</p>
+    <a class="song-frame" href="https://www.youtube.com/watch?v=tGv7CUutzqU" target="_blank" rel="noopener">
+      <div class="song-thumb">
+        <div class="song-play">▶</div>
+        <div class="song-thumb-text">
+          <b>About You</b>
+          <span>The 1975 — watch on YouTube</span>
+        </div>
+      </div>
+    </a>
+    <p class="song-note">The 1975 — About You</p>
+  </div>
+
+  <div class="final-heart">🤍</div>
+</section>
+
+<script>
+  const CODE = "0314";
+  let entered = "";
+  const stageLock = document.getElementById('stage-lock');
+  const stageTitle = document.getElementById('stage-title');
+  const stageEnvelope = document.getElementById('stage-envelope');
+  const stageLetter = document.getElementById('stage-letter');
+  const codeBoxes = document.querySelectorAll('.code-box');
+  const lockIcon = document.getElementById('lockIcon');
+  const bgm = document.getElementById('bgm');
+  const musicWidget = document.getElementById('musicWidget');
+  const musicDisc = document.getElementById('musicDisc');
+  const musicToggle = document.getElementById('musicToggle');
+
+  function renderCode(){
+    codeBoxes.forEach((box, i)=>{
+      box.textContent = entered[i] ? "•" : "";
+      box.classList.toggle('filled', !!entered[i]);
+    });
+  }
+
+  function goToStage(stage){
+    const current = document.querySelector('.stage.active');
+    if(current && current !== stage){
+      current.classList.remove('visible');
+      setTimeout(()=>{
+        current.classList.remove('active');
+        stage.classList.add('active');
+        window.scrollTo({top:0, behavior:'instant'});
+        requestAnimationFrame(()=>{
+          requestAnimationFrame(()=>{ stage.classList.add('visible'); });
+        });
+      }, 420);
+    } else {
+      stage.classList.add('active');
+      window.scrollTo({top:0, behavior:'instant'});
+      requestAnimationFrame(()=>{
+        requestAnimationFrame(()=>{ stage.classList.add('visible'); });
+      });
+    }
+  }
+
+  function startMusic(){
+    bgm.volume = 0.35;
+    bgm.play().then(()=>{
+      musicDisc.classList.add('playing');
+      musicToggle.textContent = "❚❚";
+    }).catch(()=>{ /* autoplay might be blocked, widget still lets them tap play */ });
+    musicWidget.classList.add('show');
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>{ stageLock.classList.add('visible'); });
+    });
+  });
+
+  document.getElementById('keypad').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.key');
+    if(!btn) return;
+    const val = btn.dataset.key;
+
+    if(val === 'clear'){ entered = ""; renderCode(); return; }
+    if(val === 'back'){ entered = entered.slice(0,-1); renderCode(); return; }
+    if(entered.length >= 4) return;
+
+    entered += val;
+    renderCode();
+
+    if(entered.length === 4){
+      setTimeout(()=>{
+        if(entered === CODE){
+          startMusic();
+          goToStage(stageTitle);
+        } else {
+          lockIcon.classList.add('shake');
+          codeBoxes.forEach(b=>b.classList.add('error'));
+          setTimeout(()=>{
+            lockIcon.classList.remove('shake');
+            codeBoxes.forEach(b=>b.classList.remove('error'));
+            entered = "";
+            renderCode();
+          }, 500);
+        }
+      }, 150);
+    }
+  });
+
+  document.getElementById('toEnvelope').addEventListener('click', ()=>{
+    goToStage(stageEnvelope);
+  });
+
+  document.getElementById('envelopeWrap').addEventListener('click', ()=>{
+    goToStage(stageLetter);
+  });
+
+  musicToggle.addEventListener('click', ()=>{
+    if(bgm.paused){
+      bgm.play();
+      musicDisc.classList.add('playing');
+      musicToggle.textContent = "❚❚";
+    } else {
+      bgm.pause();
+      musicDisc.classList.remove('playing');
+      musicToggle.textContent = "►";
+    }
+  });
+</script>
+
+</body>
+</html>
