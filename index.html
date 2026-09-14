@@ -396,7 +396,7 @@
 <section class="stage active" id="stage-lock">
   <div class="eyebrow">FOR VI TINY BÉO</div>
   <h1 class="title">This one's locked</h1>
-  <p class="sub">Enter the 4-digit code only you two know.</p>
+  <p class="sub">4-digit code you know.</p>
   <p class="hint">Hint: Anniversary Date</p>
 
   <div class="lock-icon" id="lockIcon">
@@ -505,7 +505,6 @@
 
   <div class="song-section">
     <h2 class="section-heading">Our Song</h2>
-    <p class="section-sub" style="margin-bottom:22px;">press play and remember</p>
     <a class="song-frame" href="https://www.youtube.com/watch?v=tGv7CUutzqU" target="_blank" rel="noopener">
       <div class="song-thumb">
         <div class="song-play">▶</div>
@@ -582,7 +581,21 @@
     const btn = e.target.closest('.key');
     if(!btn) return;
     const val = btn.dataset.key;
+    handleKeyInput(val);
+  });
 
+  document.addEventListener('keydown', (e)=>{
+    if(!stageLock.classList.contains('active')) return;
+    if(e.key >= '0' && e.key <= '9'){
+      handleKeyInput(e.key);
+    } else if(e.key === 'Backspace'){
+      handleKeyInput('back');
+    } else if(e.key === 'Escape'){
+      handleKeyInput('clear');
+    }
+  });
+
+  function handleKeyInput(val){
     if(val === 'clear'){ entered = ""; renderCode(); return; }
     if(val === 'back'){ entered = entered.slice(0,-1); renderCode(); return; }
     if(entered.length >= 4) return;
@@ -607,7 +620,7 @@
         }
       }, 150);
     }
-  });
+  }
 
   document.getElementById('toEnvelope').addEventListener('click', ()=>{
     goToStage(stageEnvelope);
